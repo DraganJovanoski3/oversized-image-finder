@@ -133,6 +133,12 @@ class OIF_Admin_Page {
 					'confirmFinish'  => __( 'Stop the scan now and keep results found so far?', 'oversized-image-finder' ),
 					'partialScan'    => __( 'Partial scan', 'oversized-image-finder' ),
 					'scannedOf'      => __( 'scanned of', 'oversized-image-finder' ),
+					'imagesToScan'   => __( 'Images to scan', 'oversized-image-finder' ),
+					'customAmount'   => __( 'Enter a custom number of images.', 'oversized-image-finder' ),
+					'invalidLimit'   => __( 'Enter a valid number greater than 0.', 'oversized-image-finder' ),
+					'foundScanning'  => __( 'Found %1$s images. Scanning the %2$s largest.', 'oversized-image-finder' ),
+					'largestScanned' => __( 'largest scanned', 'oversized-image-finder' ),
+					'preparing'      => __( 'Finding largest images to scan...', 'oversized-image-finder' ),
 				),
 			)
 		);
@@ -296,6 +302,29 @@ class OIF_Admin_Page {
 						<?php esc_html_e( 'Theme & plugins', 'oversized-image-finder' ); ?>
 					</label>
 				</fieldset>
+
+				<div class="oif-scan-limit">
+					<label for="oif-scan-limit"><?php esc_html_e( 'Images to scan', 'oversized-image-finder' ); ?></label>
+					<select id="oif-scan-limit">
+						<option value="0"><?php esc_html_e( 'All images', 'oversized-image-finder' ); ?></option>
+						<option value="100"><?php esc_html_e( '100 largest', 'oversized-image-finder' ); ?></option>
+						<option value="500" selected><?php esc_html_e( '500 largest', 'oversized-image-finder' ); ?></option>
+						<option value="1000"><?php esc_html_e( '1,000 largest', 'oversized-image-finder' ); ?></option>
+						<option value="5000"><?php esc_html_e( '5,000 largest', 'oversized-image-finder' ); ?></option>
+						<option value="10000"><?php esc_html_e( '10,000 largest', 'oversized-image-finder' ); ?></option>
+						<option value="custom"><?php esc_html_e( 'Custom amount...', 'oversized-image-finder' ); ?></option>
+					</select>
+					<input
+						type="number"
+						id="oif-scan-limit-custom"
+						min="1"
+						max="200000"
+						class="small-text"
+						placeholder="<?php esc_attr_e( 'e.g. 2500', 'oversized-image-finder' ); ?>"
+						hidden
+					/>
+					<p class="description"><?php esc_html_e( 'When limited, the largest files are scanned first.', 'oversized-image-finder' ); ?></p>
+				</div>
 
 				<div class="oif-actions">
 					<button type="button" class="button button-primary" id="oif-start-scan">

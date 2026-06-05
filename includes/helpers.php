@@ -169,6 +169,75 @@ function oif_sort_by_size_desc( $items ) {
 }
 
 /**
+ * Get file size for a queue entry (fast path for sorting).
+ *
+ * @param array{path: string, attachment_id?: int} $entry Queue entry.
+ * @return int
+ */
+function oif_get_entry_filesize( $entry ) {
+	$path = isset( $entry['path'] ) ? wp_normalize_path( $entry['path'] ) : '';
+	if ( '' === $path || ! file_exists( $path ) ) {
+		return 0;
+	}
+
+	$attachment_id = isset( $entry['attachment_id'] ) ? (int) $entry['attachment_id'] : 0;
+	if ( $attachment_id > 0 ) {
+		$metadata = wp_get_attachment_metadata( $attachment_id );
+		if ( is_array( $metadata ) && ! empty( $metadata['filesize'] ) ) {
+			return (int) $metadata['filesize'];
+		}
+	}
+
+	$size = @filesize( $path );
+	return false !== $size ? (int) $size : 0;
+}
+
+/**
+ * Limit queue to the N largest files first.
+ *
+ * @param array<int, array<string, mixed>> $queue Full queue.
+ * @param int                              $limit Max images to scan (0 = all).
+ * @return array{queue: array<int, array<string, mixed>>, found: int, limited: bool, scan_limit: int}
+ */
+function oif_limit_queue_largest_first( $queue, $limit ) {
+	$found = count( $queue );
+	$limit = max( 0, (int) $limit );
+
+	if ( 0 === $limit || $found <= $limit ) {
+		return array(
+			'queue'      => $queue,
+			'found'      => $found,
+			'limited'    => false,
+			'scan_limit' => 0 === $limit ? $found : $limit,
+		);
+	}
+
+	if ( function_exists( 'set_time_limit' ) ) {
+		@set_time_limit( 0 );
+	}
+
+	foreach ( $queue as $index => $entry ) {
+		$queue[ $index ]['sort_size'] = oif_get_entry_filesize( $entry );
+	}
+
+	usort(
+		$queue,
+		function ( $a, $b ) {
+			return (int) ( $b['sort_size'] ?? 0 ) <=> (int) ( $a['sort_size'] ?? 0 );
+		}
+	);
+
+	$queue = array_slice( $queue, 0, $limit );
+
+	return array(
+		'queue'      => $queue,
+		'found'      => $found,
+		'limited'    => true,
+		'scan_limit' => $limit,
+	);
+}
+
+/**
  * Sanitize scan scope from request.
  *
  * @param array<string, mixed> $scope Raw scope input.

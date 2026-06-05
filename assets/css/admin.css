@@ -61,10 +61,26 @@
 	text-transform: uppercase;
 }
 
-.oif-filter label {
+.oif-filter label,
+.oif-scan-limit label {
 	display: block;
 	font-weight: 600;
 	margin-bottom: 4px;
+}
+
+.oif-scan-limit {
+	min-width: 180px;
+}
+
+.oif-scan-limit select,
+.oif-scan-limit input {
+	margin-bottom: 4px;
+}
+
+.oif-scan-limit .description {
+	margin: 4px 0 0;
+	font-size: 12px;
+	color: #646970;
 }
 
 .oif-progress {
