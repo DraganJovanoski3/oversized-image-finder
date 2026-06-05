@@ -135,12 +135,34 @@ class OIF_Queue_Store {
 	}
 
 	/**
-	 * Finalize results: sort and write compact JSON file.
+	 * Load previously finalized scan results.
 	 *
 	 * @return array<int, array<string, mixed>>
 	 */
-	public static function finalize_results() {
-		$items = self::load_results_sorted();
+	public static function load_existing_final_results() {
+		$final = self::get_dir() . '/results-final.json';
+		if ( ! file_exists( $final ) ) {
+			return array();
+		}
+
+		$data = json_decode( (string) file_get_contents( $final ), true );
+		return is_array( $data ) ? $data : array();
+	}
+
+	/**
+	 * Finalize results: sort, merge with previous scan, and write JSON file.
+	 *
+	 * @param bool $merge_existing Whether to merge with a previous results file.
+	 * @return array<int, array<string, mixed>>
+	 */
+	public static function finalize_results( $merge_existing = true ) {
+		$items    = self::load_results_sorted();
+		$existing = $merge_existing ? self::load_existing_final_results() : array();
+
+		if ( ! empty( $existing ) ) {
+			$items = oif_merge_scan_results( $existing, $items );
+		}
+
 		$final = self::get_dir() . '/results-final.json';
 		$json  = wp_json_encode( $items );
 
@@ -154,6 +176,32 @@ class OIF_Queue_Store {
 		}
 
 		return $items;
+	}
+
+	/**
+	 * Update one item in finalized results.
+	 *
+	 * @param array<string, mixed> $updated Updated item.
+	 */
+	public static function update_result_item( $updated ) {
+		$items = self::load_existing_final_results();
+		if ( empty( $items ) ) {
+			return;
+		}
+
+		$name = OIF_Scanned_Registry::get_name_from_entry( $updated );
+		foreach ( $items as $index => $item ) {
+			if ( OIF_Scanned_Registry::get_name_from_entry( $item ) === $name ) {
+				$items[ $index ] = array_merge( $item, $updated );
+				break;
+			}
+		}
+
+		$items = oif_sort_by_size_desc( $items );
+		$json  = wp_json_encode( $items );
+		if ( $json ) {
+			file_put_contents( self::get_dir() . '/results-final.json', $json, LOCK_EX );
+		}
 	}
 
 	/**

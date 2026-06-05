@@ -18,6 +18,7 @@ class OIF_Ajax {
 		add_action( 'wp_ajax_oif_get_results', array( __CLASS__, 'get_results' ) );
 		add_action( 'wp_ajax_oif_clear_cache', array( __CLASS__, 'clear_cache' ) );
 		add_action( 'wp_ajax_oif_finish_scan', array( __CLASS__, 'finish_scan' ) );
+		add_action( 'wp_ajax_oif_clear_scanned_history', array( __CLASS__, 'clear_scanned_history' ) );
 	}
 
 	/**
@@ -52,17 +53,39 @@ class OIF_Ajax {
 		$scan_limit = isset( $_POST['scan_limit'] ) ? absint( $_POST['scan_limit'] ) : 0;
 		$scan_limit = min( $scan_limit, 200000 );
 
-		$scanner     = new OIF_Scanner( $scope );
-		$full_queue  = $scanner->collect_scan_queue();
+		$skip_scanned      = ! isset( $_POST['skip_scanned'] ) || ! empty( $_POST['skip_scanned'] );
+		$scanner           = new OIF_Scanner( $scope );
+		$full_queue        = $scanner->collect_scan_queue();
+		$found_total       = count( $full_queue );
+		$already_skipped   = 0;
+
+		if ( $skip_scanned ) {
+			$filtered        = OIF_Scanned_Registry::filter_queue( $full_queue );
+			$full_queue      = $filtered['queue'];
+			$already_skipped = (int) $filtered['skipped'];
+		}
+
 		$queue_setup = oif_limit_queue_largest_first( $full_queue, $scan_limit );
 		$queue       = $queue_setup['queue'];
 
 		if ( empty( $queue ) ) {
+			$remembered = OIF_Scanned_Registry::count();
+			$message    = $already_skipped > 0
+				? sprintf(
+					/* translators: 1: skipped count, 2: remembered count */
+					__( 'No new images to scan. %1$d already scanned names skipped (%2$d remembered).', 'oversized-image-finder' ),
+					$already_skipped,
+					$remembered
+				)
+				: __( 'No images found for the selected scope.', 'oversized-image-finder' );
+
 			wp_send_json_success(
 				array(
-					'total'      => 0,
-					'batch_size' => 0,
-					'message'    => __( 'No images found for the selected scope.', 'oversized-image-finder' ),
+					'total'           => 0,
+					'batch_size'      => 0,
+					'already_skipped' => $already_skipped,
+					'remembered'      => $remembered,
+					'message'         => $message,
 				)
 			);
 		}
@@ -75,42 +98,32 @@ class OIF_Ajax {
 		$batch_size = max( 10, min( 200, (int) $settings['batch_size'] ) );
 
 		$state = array(
-			'processed'   => 0,
-			'total'       => count( $queue ),
-			'found'       => (int) $queue_setup['found'],
-			'scan_limit'  => (int) $queue_setup['scan_limit'],
-			'limited'     => ! empty( $queue_setup['limited'] ),
-			'skipped'     => 0,
-			'scope'       => $scope,
-			'batch_size'  => $batch_size,
-			'started_at'  => time(),
+			'processed'       => 0,
+			'total'           => count( $queue ),
+			'found'           => $found_total,
+			'scan_limit'      => (int) $queue_setup['scan_limit'],
+			'limited'         => ! empty( $queue_setup['limited'] ),
+			'skipped'         => 0,
+			'already_skipped' => $already_skipped,
+			'scope'           => $scope,
+			'batch_size'      => $batch_size,
+			'started_at'      => time(),
 		);
 
 		set_transient( OIF_TRANSIENT_STATE, $state, HOUR_IN_SECONDS * 2 );
 
-		if ( $state['limited'] ) {
-			$message = sprintf(
-				/* translators: 1: images to scan, 2: total images found */
-				__( 'Found %2$d images. Scanning the %1$d largest first.', 'oversized-image-finder' ),
-				$state['total'],
-				$state['found']
-			);
-		} else {
-			$message = sprintf(
-				/* translators: %d: number of images */
-				__( 'Found %d images to scan.', 'oversized-image-finder' ),
-				$state['total']
-			);
-		}
+		$message = self::build_start_message( $state );
 
 		wp_send_json_success(
 			array(
-				'total'       => $state['total'],
-				'found'       => $state['found'],
-				'limited'     => $state['limited'],
-				'scan_limit'  => $state['scan_limit'],
-				'batch_size'  => $batch_size,
-				'message'     => $message,
+				'total'           => $state['total'],
+				'found'           => $state['found'],
+				'limited'         => $state['limited'],
+				'scan_limit'      => $state['scan_limit'],
+				'batch_size'      => $batch_size,
+				'already_skipped' => $already_skipped,
+				'remembered'      => OIF_Scanned_Registry::count(),
+				'message'         => $message,
 			)
 		);
 	}
@@ -139,6 +152,7 @@ class OIF_Ajax {
 		$result  = $scanner->process_batch( $batch );
 
 		OIF_Queue_Store::append_results( $result['items'] );
+		OIF_Scanned_Registry::register_items( $result['items'] );
 
 		$state['processed'] = $processed + count( $batch );
 		$state['skipped']   = (int) ( $state['skipped'] ?? 0 ) + (int) $result['skipped'];
@@ -236,7 +250,9 @@ class OIF_Ajax {
 				'processed'    => isset( $cached['processed'] ) ? (int) $cached['processed'] : 0,
 				'found'        => isset( $cached['found'] ) ? (int) $cached['found'] : 0,
 				'limited'      => ! empty( $cached['limited'] ),
-				'scan_limit'   => isset( $cached['scan_limit'] ) ? (int) $cached['scan_limit'] : 0,
+				'scan_limit'      => isset( $cached['scan_limit'] ) ? (int) $cached['scan_limit'] : 0,
+				'already_skipped' => isset( $cached['already_skipped'] ) ? (int) $cached['already_skipped'] : 0,
+				'remembered'      => OIF_Scanned_Registry::count(),
 			)
 		);
 	}
@@ -364,7 +380,9 @@ class OIF_Ajax {
 			'slow_count'  => $slow_count,
 			'largest_kb'  => ! empty( $items[0]['filesize'] ) ? round( (int) $items[0]['filesize'] / 1024, 1 ) : 0,
 			'storage'     => 'file',
-			'partial'     => $partial,
+			'partial'         => $partial,
+			'already_skipped' => (int) ( $state['already_skipped'] ?? 0 ),
+			'remembered'      => OIF_Scanned_Registry::count(),
 		);
 
 		set_transient( OIF_TRANSIENT_RESULTS, $final, $ttl );
@@ -386,6 +404,41 @@ class OIF_Ajax {
 	}
 
 	/**
+	 * Build the scan start message.
+	 *
+	 * @param array<string, mixed> $state Scan state.
+	 * @return string
+	 */
+	private static function build_start_message( $state ) {
+		$parts = array();
+
+		if ( ! empty( $state['limited'] ) ) {
+			$parts[] = sprintf(
+				/* translators: 1: images to scan, 2: total images found */
+				__( 'Found %2$d images. Scanning the %1$d largest first.', 'oversized-image-finder' ),
+				(int) $state['total'],
+				(int) $state['found']
+			);
+		} else {
+			$parts[] = sprintf(
+				/* translators: %d: number of images */
+				__( 'Found %d images to scan.', 'oversized-image-finder' ),
+				(int) $state['total']
+			);
+		}
+
+		if ( ! empty( $state['already_skipped'] ) ) {
+			$parts[] = sprintf(
+				/* translators: %d: number of skipped filenames */
+				__( '%d previously scanned names skipped.', 'oversized-image-finder' ),
+				(int) $state['already_skipped']
+			);
+		}
+
+		return implode( ' ', $parts );
+	}
+
+	/**
 	 * Clear cached scan results.
 	 */
 	public static function clear_cache() {
@@ -393,6 +446,21 @@ class OIF_Ajax {
 		self::clear_scan_data();
 
 		wp_send_json_success( array( 'message' => __( 'Cache cleared.', 'oversized-image-finder' ) ) );
+	}
+
+	/**
+	 * Clear remembered scanned filenames.
+	 */
+	public static function clear_scanned_history() {
+		self::verify_request();
+		OIF_Scanned_Registry::clear();
+
+		wp_send_json_success(
+			array(
+				'message'    => __( 'Scanned filename history cleared.', 'oversized-image-finder' ),
+				'remembered' => 0,
+			)
+		);
 	}
 
 	/**

@@ -65,6 +65,7 @@ class OIF_Admin_Page {
 		$output['cache_ttl_hours']   = isset( $input['cache_ttl_hours'] ) ? max( 1, min( 168, absint( $input['cache_ttl_hours'] ) ) ) : $defaults['cache_ttl_hours'];
 		$output['skip_thumbnails']   = ! empty( $input['skip_thumbnails'] ) ? 1 : 0;
 		$output['check_usage']       = ! empty( $input['check_usage'] ) ? 1 : 0;
+		$output['scale_quality']     = isset( $input['scale_quality'] ) ? max( 50, min( 100, absint( $input['scale_quality'] ) ) ) : $defaults['scale_quality'];
 
 		return $output;
 	}
@@ -104,8 +105,9 @@ class OIF_Admin_Page {
 				'ajaxUrl'  => admin_url( 'admin-ajax.php' ),
 				'nonce'    => wp_create_nonce( 'oif_scan_nonce' ),
 				'settings' => $settings,
-				'cached'   => is_array( $cached ) ? $cached : null,
-				'i18n'     => array(
+				'cached'     => is_array( $cached ) ? $cached : null,
+				'remembered' => OIF_Scanned_Registry::count(),
+				'i18n'       => array(
 					'scanning'       => __( 'Scanning', 'oversized-image-finder' ),
 					'scanComplete'   => __( 'Scan complete.', 'oversized-image-finder' ),
 					'scanError'      => __( 'Scan failed. Please try again.', 'oversized-image-finder' ),
@@ -138,7 +140,25 @@ class OIF_Admin_Page {
 					'invalidLimit'   => __( 'Enter a valid number greater than 0.', 'oversized-image-finder' ),
 					'foundScanning'  => __( 'Found %1$s images. Scanning the %2$s largest.', 'oversized-image-finder' ),
 					'largestScanned' => __( 'largest scanned', 'oversized-image-finder' ),
-					'preparing'      => __( 'Finding largest images to scan...', 'oversized-image-finder' ),
+					'preparing'           => __( 'Finding largest images to scan...', 'oversized-image-finder' ),
+					'skipScanned'         => __( 'Skip previously scanned filenames', 'oversized-image-finder' ),
+					'rememberedNames'     => __( '%d scanned filenames remembered', 'oversized-image-finder' ),
+					'clearScannedHistory' => __( 'Clear scanned history', 'oversized-image-finder' ),
+					'confirmClearHistory' => __( 'Clear remembered scanned filenames? The next scan will check all images again.', 'oversized-image-finder' ),
+					'alreadySkipped'      => __( 'already skipped', 'oversized-image-finder' ),
+					'scale'               => __( 'Scale', 'oversized-image-finder' ),
+					'scaleImage'          => __( 'Scale image', 'oversized-image-finder' ),
+					'scaleMode'           => __( 'Resize mode', 'oversized-image-finder' ),
+					'scalePercent'        => __( 'Scale by percent', 'oversized-image-finder' ),
+					'scaleMaxDimensions'  => __( 'Fit within max dimensions', 'oversized-image-finder' ),
+					'maxWidth'            => __( 'Max width (px)', 'oversized-image-finder' ),
+					'maxHeight'           => __( 'Max height (px)', 'oversized-image-finder' ),
+					'quality'             => __( 'JPEG quality', 'oversized-image-finder' ),
+					'applyScale'          => __( 'Apply scale', 'oversized-image-finder' ),
+					'cancel'              => __( 'Cancel', 'oversized-image-finder' ),
+					'scaling'             => __( 'Scaling image...', 'oversized-image-finder' ),
+					'confirmScale'        => __( 'Overwrite the original image file with the scaled version?', 'oversized-image-finder' ),
+					'currentSize'         => __( 'Current', 'oversized-image-finder' ),
 				),
 			)
 		);
@@ -250,6 +270,15 @@ class OIF_Admin_Page {
 				</tr>
 				<tr>
 					<th scope="row">
+						<label for="oif_scale_quality"><?php esc_html_e( 'Scale JPEG quality', 'oversized-image-finder' ); ?></label>
+					</th>
+					<td>
+						<input type="number" id="oif_scale_quality" name="<?php echo esc_attr( OIF_OPTION_KEY ); ?>[scale_quality]" value="<?php echo esc_attr( $settings['scale_quality'] ); ?>" min="50" max="100" class="small-text" />
+						<p class="description"><?php esc_html_e( 'Default quality when scaling images from the results table (50–100).', 'oversized-image-finder' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">
 						<label for="oif_batch_size"><?php esc_html_e( 'Batch size', 'oversized-image-finder' ); ?></label>
 					</th>
 					<td>
@@ -301,6 +330,18 @@ class OIF_Admin_Page {
 						<input type="checkbox" id="oif-scope-theme" />
 						<?php esc_html_e( 'Theme & plugins', 'oversized-image-finder' ); ?>
 					</label>
+				</fieldset>
+
+				<fieldset class="oif-memory">
+					<legend><?php esc_html_e( 'Scan memory', 'oversized-image-finder' ); ?></legend>
+					<label>
+						<input type="checkbox" id="oif-skip-scanned" checked />
+						<?php esc_html_e( 'Skip previously scanned filenames', 'oversized-image-finder' ); ?>
+					</label>
+					<p class="oif-remembered-count" id="oif-remembered-count"></p>
+					<button type="button" class="button-link" id="oif-clear-scanned-history">
+						<?php esc_html_e( 'Clear scanned history', 'oversized-image-finder' ); ?>
+					</button>
 				</fieldset>
 
 				<div class="oif-scan-limit">
@@ -425,6 +466,59 @@ class OIF_Admin_Page {
 				<button type="button" class="button" id="oif-prev-page-bottom">&larr; <?php esc_html_e( 'Previous', 'oversized-image-finder' ); ?></button>
 				<span id="oif-page-info-bottom"></span>
 				<button type="button" class="button" id="oif-next-page-bottom"><?php esc_html_e( 'Next', 'oversized-image-finder' ); ?> &rarr;</button>
+			</div>
+
+			<div class="oif-modal" id="oif-scale-modal" hidden>
+				<div class="oif-modal-backdrop" id="oif-scale-backdrop"></div>
+				<div class="oif-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="oif-scale-title">
+					<h2 id="oif-scale-title"><?php esc_html_e( 'Scale image', 'oversized-image-finder' ); ?></h2>
+					<p class="oif-scale-filename" id="oif-scale-filename"></p>
+					<p class="oif-scale-current" id="oif-scale-current"></p>
+
+					<div class="oif-scale-mode">
+						<label>
+							<input type="radio" name="oif_scale_mode" value="percent" checked />
+							<?php esc_html_e( 'Scale by percent', 'oversized-image-finder' ); ?>
+						</label>
+						<label>
+							<input type="radio" name="oif_scale_mode" value="dimensions" />
+							<?php esc_html_e( 'Fit within max dimensions', 'oversized-image-finder' ); ?>
+						</label>
+					</div>
+
+					<div class="oif-scale-fields" id="oif-scale-percent-wrap">
+						<label for="oif-scale-percent"><?php esc_html_e( 'Scale percent', 'oversized-image-finder' ); ?></label>
+						<select id="oif-scale-percent">
+							<option value="75">75%</option>
+							<option value="50" selected>50%</option>
+							<option value="33">33%</option>
+							<option value="25">25%</option>
+						</select>
+					</div>
+
+					<div class="oif-scale-fields" id="oif-scale-dimensions-wrap" hidden>
+						<p>
+							<label for="oif-scale-max-width"><?php esc_html_e( 'Max width (px)', 'oversized-image-finder' ); ?></label>
+							<input type="number" id="oif-scale-max-width" class="small-text" min="1" />
+						</p>
+						<p>
+							<label for="oif-scale-max-height"><?php esc_html_e( 'Max height (px)', 'oversized-image-finder' ); ?></label>
+							<input type="number" id="oif-scale-max-height" class="small-text" min="1" />
+						</p>
+					</div>
+
+					<p>
+						<label for="oif-scale-quality"><?php esc_html_e( 'JPEG quality', 'oversized-image-finder' ); ?></label>
+						<input type="number" id="oif-scale-quality" class="small-text" min="50" max="100" value="<?php echo esc_attr( $settings['scale_quality'] ); ?>" />
+					</p>
+
+					<p class="oif-scale-warning"><?php esc_html_e( 'This overwrites the original image file. WordPress thumbnails are regenerated for Media Library images.', 'oversized-image-finder' ); ?></p>
+
+					<div class="oif-modal-actions">
+						<button type="button" class="button button-primary" id="oif-scale-apply"><?php esc_html_e( 'Apply scale', 'oversized-image-finder' ); ?></button>
+						<button type="button" class="button" id="oif-scale-cancel"><?php esc_html_e( 'Cancel', 'oversized-image-finder' ); ?></button>
+					</div>
+				</div>
 			</div>
 		</div>
 		<?php

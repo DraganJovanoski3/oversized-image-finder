@@ -18,18 +18,32 @@
 	border-radius: 4px;
 }
 
-.oif-scope {
+.oif-scope,
+.oif-memory {
 	border: none;
 	margin: 0;
 	padding: 0;
 }
 
+.oif-memory legend,
 .oif-scope legend {
 	font-weight: 600;
 	margin-bottom: 8px;
 }
 
-.oif-scope label {
+.oif-remembered-count {
+	margin: 6px 0 4px;
+	font-size: 12px;
+	color: #646970;
+}
+
+.oif-memory .button-link {
+	padding: 0;
+	font-size: 12px;
+}
+
+.oif-scope label,
+.oif-memory label {
 	display: inline-block;
 	margin-right: 16px;
 }
@@ -182,8 +196,73 @@
 	word-break: break-all;
 }
 
-.oif-actions-cell a {
+.oif-actions-cell a,
+.oif-actions-cell .button-link {
 	margin-right: 8px;
+}
+
+.oif-actions-cell .oif-scale-btn {
+	color: #2271b1;
+	cursor: pointer;
+}
+
+.oif-modal {
+	position: fixed;
+	inset: 0;
+	z-index: 100000;
+}
+
+.oif-modal-backdrop {
+	position: absolute;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.45);
+}
+
+.oif-modal-dialog {
+	position: relative;
+	max-width: 480px;
+	margin: 8vh auto;
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+	padding: 20px 24px;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+}
+
+.oif-modal-dialog h2 {
+	margin: 0 0 12px;
+	font-size: 18px;
+}
+
+.oif-scale-filename {
+	font-weight: 600;
+	margin: 0 0 8px;
+	word-break: break-all;
+}
+
+.oif-scale-current,
+.oif-scale-warning {
+	color: #646970;
+	font-size: 13px;
+}
+
+.oif-scale-mode label {
+	display: block;
+	margin-bottom: 6px;
+}
+
+.oif-scale-fields {
+	margin: 12px 0;
+}
+
+.oif-scale-fields p {
+	margin: 8px 0;
+}
+
+.oif-modal-actions {
+	display: flex;
+	gap: 8px;
+	margin-top: 16px;
 }
 
 .oif-empty-row td {

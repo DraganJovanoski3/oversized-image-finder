@@ -238,6 +238,37 @@ function oif_limit_queue_largest_first( $queue, $limit ) {
 }
 
 /**
+ * Merge scan result sets and keep the largest copy per filename.
+ *
+ * @param array<int, array<string, mixed>> $existing Existing items.
+ * @param array<int, array<string, mixed>> $incoming New items.
+ * @return array<int, array<string, mixed>>
+ */
+function oif_merge_scan_results( $existing, $incoming ) {
+	$by_name = array();
+
+	foreach ( $existing as $item ) {
+		$name = OIF_Scanned_Registry::get_name_from_entry( $item );
+		if ( '' !== $name ) {
+			$by_name[ $name ] = $item;
+		}
+	}
+
+	foreach ( $incoming as $item ) {
+		$name = OIF_Scanned_Registry::get_name_from_entry( $item );
+		if ( '' === $name ) {
+			continue;
+		}
+
+		if ( ! isset( $by_name[ $name ] ) || (int) ( $item['filesize'] ?? 0 ) > (int) ( $by_name[ $name ]['filesize'] ?? 0 ) ) {
+			$by_name[ $name ] = $item;
+		}
+	}
+
+	return oif_sort_by_size_desc( array_values( $by_name ) );
+}
+
+/**
  * Sanitize scan scope from request.
  *
  * @param array<string, mixed> $scope Raw scope input.
