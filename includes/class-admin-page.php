@@ -56,11 +56,15 @@ class OIF_Admin_Page {
 		$defaults = oif_get_default_settings();
 		$output   = array();
 
-		$output['max_file_size_kb'] = isset( $input['max_file_size_kb'] ) ? max( 1, absint( $input['max_file_size_kb'] ) ) : $defaults['max_file_size_kb'];
-		$output['max_width']        = isset( $input['max_width'] ) ? max( 1, absint( $input['max_width'] ) ) : $defaults['max_width'];
-		$output['max_height']       = isset( $input['max_height'] ) ? max( 1, absint( $input['max_height'] ) ) : $defaults['max_height'];
-		$output['batch_size']       = isset( $input['batch_size'] ) ? max( 10, min( 200, absint( $input['batch_size'] ) ) ) : $defaults['batch_size'];
-		$output['cache_ttl_hours']  = isset( $input['cache_ttl_hours'] ) ? max( 1, min( 168, absint( $input['cache_ttl_hours'] ) ) ) : $defaults['cache_ttl_hours'];
+		$output['max_file_size_kb']  = isset( $input['max_file_size_kb'] ) ? max( 1, absint( $input['max_file_size_kb'] ) ) : $defaults['max_file_size_kb'];
+		$output['max_width']         = isset( $input['max_width'] ) ? max( 1, absint( $input['max_width'] ) ) : $defaults['max_width'];
+		$output['max_height']        = isset( $input['max_height'] ) ? max( 1, absint( $input['max_height'] ) ) : $defaults['max_height'];
+		$output['slow_threshold_kb'] = isset( $input['slow_threshold_kb'] ) ? max( 1, absint( $input['slow_threshold_kb'] ) ) : $defaults['slow_threshold_kb'];
+		$output['batch_size']        = isset( $input['batch_size'] ) ? max( 10, min( 200, absint( $input['batch_size'] ) ) ) : $defaults['batch_size'];
+		$output['per_page']          = isset( $input['per_page'] ) ? max( 10, min( 200, absint( $input['per_page'] ) ) ) : $defaults['per_page'];
+		$output['cache_ttl_hours']   = isset( $input['cache_ttl_hours'] ) ? max( 1, min( 168, absint( $input['cache_ttl_hours'] ) ) ) : $defaults['cache_ttl_hours'];
+		$output['skip_thumbnails']   = ! empty( $input['skip_thumbnails'] ) ? 1 : 0;
+		$output['check_usage']       = ! empty( $input['check_usage'] ) ? 1 : 0;
 
 		return $output;
 	}
@@ -116,6 +120,19 @@ class OIF_Admin_Page {
 					'severityHigh'   => __( 'High', 'oversized-image-finder' ),
 					'severityMedium' => __( 'Medium', 'oversized-image-finder' ),
 					'severityInfo'   => __( 'Info', 'oversized-image-finder' ),
+					'slowRisk'       => __( 'Slow risk', 'oversized-image-finder' ),
+					'likelyOk'       => __( 'Likely OK', 'oversized-image-finder' ),
+					'rank'           => __( 'Rank', 'oversized-image-finder' ),
+					'safeLine'       => __( 'Below this line, images are usually fine for web speed. Work from #1 downward to fix the worst offenders first.', 'oversized-image-finder' ),
+					'largestFirst'   => __( 'Largest first (work down the list)', 'oversized-image-finder' ),
+					'page'           => __( 'Page', 'oversized-image-finder' ),
+					'of'             => __( 'of', 'oversized-image-finder' ),
+					'livePreview'    => __( 'Live preview — largest files found so far:', 'oversized-image-finder' ),
+					'largestFile'    => __( 'Largest file so far:', 'oversized-image-finder' ),
+					'finishScan'     => __( 'Finish Scan', 'oversized-image-finder' ),
+					'confirmFinish'  => __( 'Stop the scan now and keep results found so far?', 'oversized-image-finder' ),
+					'partialScan'    => __( 'Partial scan', 'oversized-image-finder' ),
+					'scannedOf'      => __( 'scanned of', 'oversized-image-finder' ),
 				),
 			)
 		);
@@ -195,6 +212,38 @@ class OIF_Admin_Page {
 				</tr>
 				<tr>
 					<th scope="row">
+						<label for="oif_slow_threshold_kb"><?php esc_html_e( 'Slow threshold (KB)', 'oversized-image-finder' ); ?></label>
+					</th>
+					<td>
+						<input type="number" id="oif_slow_threshold_kb" name="<?php echo esc_attr( OIF_OPTION_KEY ); ?>[slow_threshold_kb]" value="<?php echo esc_attr( $settings['slow_threshold_kb'] ); ?>" min="1" class="small-text" />
+						<p class="description"><?php esc_html_e( 'Files at or above this size are shown first as likely slow. Below this line, images are usually acceptable for web.', 'oversized-image-finder' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">
+						<label for="oif_per_page"><?php esc_html_e( 'Results per page', 'oversized-image-finder' ); ?></label>
+					</th>
+					<td>
+						<input type="number" id="oif_per_page" name="<?php echo esc_attr( OIF_OPTION_KEY ); ?>[per_page]" value="<?php echo esc_attr( $settings['per_page'] ); ?>" min="10" max="200" class="small-text" />
+						<p class="description"><?php esc_html_e( 'Work through the list page by page from largest to smallest.', 'oversized-image-finder' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Performance options', 'oversized-image-finder' ); ?></th>
+					<td>
+						<label>
+							<input type="checkbox" name="<?php echo esc_attr( OIF_OPTION_KEY ); ?>[skip_thumbnails]" value="1" <?php checked( ! empty( $settings['skip_thumbnails'] ) ); ?> />
+							<?php esc_html_e( 'Skip WordPress thumbnails (recommended for large sites)', 'oversized-image-finder' ); ?>
+						</label>
+						<br />
+						<label>
+							<input type="checkbox" name="<?php echo esc_attr( OIF_OPTION_KEY ); ?>[check_usage]" value="1" <?php checked( ! empty( $settings['check_usage'] ) ); ?> />
+							<?php esc_html_e( 'Check where images are used (slower on large libraries)', 'oversized-image-finder' ); ?>
+						</label>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">
 						<label for="oif_batch_size"><?php esc_html_e( 'Batch size', 'oversized-image-finder' ); ?></label>
 					</th>
 					<td>
@@ -239,7 +288,7 @@ class OIF_Admin_Page {
 						<?php esc_html_e( 'Media Library', 'oversized-image-finder' ); ?>
 					</label>
 					<label>
-						<input type="checkbox" id="oif-scope-uploads" checked />
+						<input type="checkbox" id="oif-scope-uploads" />
 						<?php esc_html_e( 'Entire uploads folder', 'oversized-image-finder' ); ?>
 					</label>
 					<label>
@@ -255,18 +304,26 @@ class OIF_Admin_Page {
 					<button type="button" class="button" id="oif-rescan">
 						<?php esc_html_e( 'Rescan', 'oversized-image-finder' ); ?>
 					</button>
+					<button type="button" class="button" id="oif-finish-scan" hidden>
+						<?php esc_html_e( 'Finish Scan', 'oversized-image-finder' ); ?>
+					</button>
 				</div>
 
 				<div class="oif-filter">
 					<label for="oif-filter-mode"><?php esc_html_e( 'Filter', 'oversized-image-finder' ); ?></label>
 					<select id="oif-filter-mode">
+						<option value="largest_slow"><?php esc_html_e( 'Largest slow files first (recommended)', 'oversized-image-finder' ); ?></option>
+						<option value="all"><?php esc_html_e( 'All files, largest to smallest', 'oversized-image-finder' ); ?></option>
 						<option value="oversized"><?php esc_html_e( 'Oversized only (size or dimensions)', 'oversized-image-finder' ); ?></option>
 						<option value="size"><?php esc_html_e( 'By file size only', 'oversized-image-finder' ); ?></option>
 						<option value="dimensions"><?php esc_html_e( 'By dimensions only', 'oversized-image-finder' ); ?></option>
-						<option value="all"><?php esc_html_e( 'Show all (sorted by size)', 'oversized-image-finder' ); ?></option>
 					</select>
 				</div>
 			</div>
+
+			<p class="oif-strategy-note">
+				<?php esc_html_e( 'Strategy: start at rank #1 (biggest file), optimize or replace, then work down the list until images fall below the slow threshold.', 'oversized-image-finder' ); ?>
+			</p>
 
 			<div class="oif-progress" id="oif-progress" hidden>
 				<div class="oif-progress-bar">
@@ -293,8 +350,9 @@ class OIF_Admin_Page {
 			<div class="oif-thresholds-note">
 				<?php
 				printf(
-					/* translators: 1: max file size KB, 2: max width, 3: max height */
-					esc_html__( 'Current thresholds: %1$s KB file size, %2$s px width, %3$s px height.', 'oversized-image-finder' ),
+					/* translators: 1: slow threshold KB, 2: max file size KB, 3: max width, 4: max height */
+					esc_html__( 'Slow threshold: %1$s KB · Oversized: %2$s KB, %3$s×%4$s px.', 'oversized-image-finder' ),
+					esc_html( (string) $settings['slow_threshold_kb'] ),
 					esc_html( (string) $settings['max_file_size_kb'] ),
 					esc_html( (string) $settings['max_width'] ),
 					esc_html( (string) $settings['max_height'] )
@@ -305,9 +363,16 @@ class OIF_Admin_Page {
 				</a>
 			</div>
 
+			<div class="oif-pagination" id="oif-pagination" hidden>
+				<button type="button" class="button" id="oif-prev-page">&larr; <?php esc_html_e( 'Previous', 'oversized-image-finder' ); ?></button>
+				<span id="oif-page-info"></span>
+				<button type="button" class="button" id="oif-next-page"><?php esc_html_e( 'Next', 'oversized-image-finder' ); ?> &rarr;</button>
+			</div>
+
 			<table class="wp-list-table widefat fixed striped oif-results-table" id="oif-results-table">
 				<thead>
 					<tr>
+						<th class="oif-col-rank">#</th>
 						<th class="oif-col-thumb"><?php esc_html_e( 'Preview', 'oversized-image-finder' ); ?></th>
 						<th class="oif-col-sortable" data-sort="filename"><?php esc_html_e( 'Filename', 'oversized-image-finder' ); ?></th>
 						<th class="oif-col-sortable" data-sort="filesize"><?php esc_html_e( 'File size', 'oversized-image-finder' ); ?></th>
@@ -316,16 +381,22 @@ class OIF_Admin_Page {
 						<th><?php esc_html_e( 'Location', 'oversized-image-finder' ); ?></th>
 						<th><?php esc_html_e( 'In library', 'oversized-image-finder' ); ?></th>
 						<th><?php esc_html_e( 'Used on site', 'oversized-image-finder' ); ?></th>
-						<th><?php esc_html_e( 'Severity', 'oversized-image-finder' ); ?></th>
+						<th><?php esc_html_e( 'Speed', 'oversized-image-finder' ); ?></th>
 						<th><?php esc_html_e( 'Actions', 'oversized-image-finder' ); ?></th>
 					</tr>
 				</thead>
 				<tbody id="oif-results-body">
 					<tr class="oif-empty-row">
-						<td colspan="10"><?php esc_html_e( 'No scan results yet. Click "Start Scan" to begin.', 'oversized-image-finder' ); ?></td>
+						<td colspan="11"><?php esc_html_e( 'No scan results yet. Click "Start Scan" to begin.', 'oversized-image-finder' ); ?></td>
 					</tr>
 				</tbody>
 			</table>
+
+			<div class="oif-pagination oif-pagination-bottom" id="oif-pagination-bottom" hidden>
+				<button type="button" class="button" id="oif-prev-page-bottom">&larr; <?php esc_html_e( 'Previous', 'oversized-image-finder' ); ?></button>
+				<span id="oif-page-info-bottom"></span>
+				<button type="button" class="button" id="oif-next-page-bottom"><?php esc_html_e( 'Next', 'oversized-image-finder' ); ?> &rarr;</button>
+			</div>
 		</div>
 		<?php
 	}

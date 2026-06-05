@@ -75,6 +75,12 @@ class OIF_Scanner {
 		$skipped = 0;
 
 		foreach ( $batch as $entry ) {
+			$path = isset( $entry['path'] ) ? wp_normalize_path( $entry['path'] ) : '';
+			if ( $path && ! empty( $this->settings['skip_thumbnails'] ) && oif_is_wp_thumbnail( $path ) ) {
+				++$skipped;
+				continue;
+			}
+
 			$item = $this->build_item_from_entry( $entry );
 			if ( null === $item ) {
 				++$skipped;
@@ -86,6 +92,7 @@ class OIF_Scanner {
 			$item['dim_over']   = $thresholds['dim_over'];
 			$item['oversized']  = $thresholds['oversized'];
 			$item['severity']   = oif_get_severity( $item, $this->settings );
+			$item['slow_risk']  = oif_get_slow_risk( $item, $this->settings );
 
 			$items[] = $item;
 		}
@@ -268,7 +275,9 @@ class OIF_Scanner {
 				$upload_date = $post->post_date;
 			}
 
-			$usage_count = $this->get_attachment_usage_count( $attachment_id, $path );
+			if ( ! empty( $this->settings['check_usage'] ) ) {
+				$usage_count = $this->get_attachment_usage_count( $attachment_id, $path );
+			}
 			$in_library  = true;
 		} else {
 			$image_info = @getimagesize( $path );

@@ -3,7 +3,7 @@
  * Plugin Name: Oversized Image Finder
  * Plugin URI: https://github.com/
  * Description: Find oversized images that slow down your site. Scan the Media Library, uploads folder, and theme/plugin directories. View filename, size, dimensions, and more.
- * Version: 1.0.0
+ * Version: 1.1.1
  * Author: DP
  * Text Domain: oversized-image-finder
  * Requires at least: 5.8
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OIF_VERSION', '1.0.0' );
+define( 'OIF_VERSION', '1.1.1' );
 define( 'OIF_PLUGIN_FILE', __FILE__ );
 define( 'OIF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'OIF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -23,6 +23,7 @@ define( 'OIF_TRANSIENT_RESULTS', 'oif_scan_results' );
 define( 'OIF_TRANSIENT_STATE', 'oif_scan_state' );
 
 require_once OIF_PLUGIN_DIR . 'includes/helpers.php';
+require_once OIF_PLUGIN_DIR . 'includes/class-queue-store.php';
 require_once OIF_PLUGIN_DIR . 'includes/class-scanner.php';
 require_once OIF_PLUGIN_DIR . 'includes/class-ajax.php';
 require_once OIF_PLUGIN_DIR . 'includes/class-admin-page.php';
@@ -34,11 +35,15 @@ require_once OIF_PLUGIN_DIR . 'includes/class-admin-page.php';
  */
 function oif_get_default_settings() {
 	return array(
-		'max_file_size_kb' => 500,
-		'max_width'        => 2000,
-		'max_height'       => 2000,
-		'batch_size'       => 50,
-		'cache_ttl_hours'  => 24,
+		'max_file_size_kb'  => 500,
+		'max_width'         => 2000,
+		'max_height'        => 2000,
+		'slow_threshold_kb' => 200,
+		'batch_size'        => 100,
+		'per_page'          => 50,
+		'cache_ttl_hours'   => 24,
+		'skip_thumbnails'   => 1,
+		'check_usage'       => 0,
 	);
 }
 

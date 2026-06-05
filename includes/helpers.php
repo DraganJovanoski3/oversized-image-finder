@@ -123,6 +123,52 @@ function oif_check_thresholds( $item, $settings ) {
 }
 
 /**
+ * Detect WordPress auto-generated thumbnail/resized files.
+ *
+ * @param string $path File path.
+ * @return bool
+ */
+function oif_is_wp_thumbnail( $path ) {
+	$filename = basename( $path );
+	return (bool) preg_match( '/-\d+x\d+\.(jpe?g|png|gif|webp|avif)$/i', $filename );
+}
+
+/**
+ * Determine if an image is likely slowing the site down.
+ *
+ * @param array<string, mixed> $item     Image data.
+ * @param array<string, int>   $settings Plugin settings.
+ * @return string slow|ok
+ */
+function oif_get_slow_risk( $item, $settings ) {
+	$slow_bytes = (int) $settings['slow_threshold_kb'] * 1024;
+	$filesize   = isset( $item['filesize'] ) ? (int) $item['filesize'] : 0;
+
+	if ( $filesize >= $slow_bytes ) {
+		return 'slow';
+	}
+
+	return 'ok';
+}
+
+/**
+ * Sort items by file size descending (largest first).
+ *
+ * @param array<int, array<string, mixed>> $items Image items.
+ * @return array<int, array<string, mixed>>
+ */
+function oif_sort_by_size_desc( $items ) {
+	usort(
+		$items,
+		function ( $a, $b ) {
+			return (int) ( $b['filesize'] ?? 0 ) <=> (int) ( $a['filesize'] ?? 0 );
+		}
+	);
+
+	return $items;
+}
+
+/**
  * Sanitize scan scope from request.
  *
  * @param array<string, mixed> $scope Raw scope input.
