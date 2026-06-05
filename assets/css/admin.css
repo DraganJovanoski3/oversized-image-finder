@@ -1,0 +1,160 @@
+.oif-wrap {
+	max-width: 1400px;
+}
+
+.oif-tabs {
+	margin-bottom: 20px;
+}
+
+.oif-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 20px;
+	align-items: flex-end;
+	margin-bottom: 20px;
+	padding: 16px;
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+}
+
+.oif-scope {
+	border: none;
+	margin: 0;
+	padding: 0;
+}
+
+.oif-scope legend {
+	font-weight: 600;
+	margin-bottom: 8px;
+}
+
+.oif-scope label {
+	display: inline-block;
+	margin-right: 16px;
+}
+
+.oif-actions {
+	display: flex;
+	gap: 8px;
+}
+
+.oif-filter label {
+	display: block;
+	font-weight: 600;
+	margin-bottom: 4px;
+}
+
+.oif-progress {
+	margin-bottom: 20px;
+}
+
+.oif-progress-bar {
+	height: 24px;
+	background: #f0f0f1;
+	border-radius: 4px;
+	overflow: hidden;
+	border: 1px solid #c3c4c7;
+}
+
+.oif-progress-fill {
+	height: 100%;
+	width: 0;
+	background: #2271b1;
+	transition: width 0.2s ease;
+}
+
+.oif-progress-text {
+	margin: 8px 0 0;
+	font-weight: 500;
+}
+
+.oif-summary-stats {
+	font-size: 14px;
+}
+
+.oif-summary-stats strong {
+	color: #1d2327;
+}
+
+.oif-thresholds-note {
+	margin-bottom: 16px;
+	color: #646970;
+}
+
+.oif-results-table .oif-col-thumb {
+	width: 70px;
+}
+
+.oif-thumb {
+	width: 50px;
+	height: 50px;
+	object-fit: cover;
+	border-radius: 3px;
+	border: 1px solid #c3c4c7;
+	background: #f6f7f7;
+}
+
+.oif-col-sortable {
+	cursor: pointer;
+	user-select: none;
+}
+
+.oif-col-sortable:hover {
+	color: #2271b1;
+}
+
+.oif-col-sortable.is-sorted-asc::after {
+	content: " ▲";
+	font-size: 10px;
+}
+
+.oif-col-sortable.is-sorted-desc::after {
+	content: " ▼";
+	font-size: 10px;
+}
+
+.oif-badge {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 3px;
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+}
+
+.oif-badge-high {
+	background: #fcf0f1;
+	color: #b32d2e;
+}
+
+.oif-badge-medium {
+	background: #fcf9e8;
+	color: #996800;
+}
+
+.oif-badge-info {
+	background: #f0f6fc;
+	color: #2271b1;
+}
+
+.oif-location {
+	font-size: 12px;
+	color: #646970;
+	word-break: break-all;
+}
+
+.oif-actions-cell a {
+	margin-right: 8px;
+}
+
+.oif-empty-row td {
+	text-align: center;
+	color: #646970;
+	padding: 24px;
+}
+
+.oif-settings-form {
+	margin-top: 20px;
+	max-width: 700px;
+}
