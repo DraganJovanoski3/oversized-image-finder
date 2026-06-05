@@ -66,6 +66,7 @@ class OIF_Admin_Page {
 		$output['skip_thumbnails']   = ! empty( $input['skip_thumbnails'] ) ? 1 : 0;
 		$output['check_usage']       = ! empty( $input['check_usage'] ) ? 1 : 0;
 		$output['scale_quality']     = isset( $input['scale_quality'] ) ? max( 50, min( 100, absint( $input['scale_quality'] ) ) ) : $defaults['scale_quality'];
+		$output['bulk_scale_batch']  = isset( $input['bulk_scale_batch'] ) ? max( 1, min( 20, absint( $input['bulk_scale_batch'] ) ) ) : $defaults['bulk_scale_batch'];
 
 		return $output;
 	}
@@ -159,6 +160,15 @@ class OIF_Admin_Page {
 					'scaling'             => __( 'Scaling image...', 'oversized-image-finder' ),
 					'confirmScale'        => __( 'Overwrite the original image file with the scaled version?', 'oversized-image-finder' ),
 					'currentSize'         => __( 'Current', 'oversized-image-finder' ),
+					'bulkScale'           => __( 'Bulk scale down', 'oversized-image-finder' ),
+					'bulkScaleTitle'      => __( 'Bulk scale images', 'oversized-image-finder' ),
+					'selectedCount'       => __( '%d selected', 'oversized-image-finder' ),
+					'selectAll'           => __( 'Select all on page', 'oversized-image-finder' ),
+					'confirmBulkScale'    => __( 'Overwrite %d original image files with scaled versions?', 'oversized-image-finder' ),
+					'bulkScaling'         => __( 'Bulk scaling', 'oversized-image-finder' ),
+					'bulkScaleComplete'   => __( 'Bulk scale complete. %1$d scaled, %2$d skipped. Saved %3$s.', 'oversized-image-finder' ),
+					'noSelection'         => __( 'Select at least one image to bulk scale.', 'oversized-image-finder' ),
+					'selectPage'          => __( 'Select page', 'oversized-image-finder' ),
 				),
 			)
 		);
@@ -275,6 +285,15 @@ class OIF_Admin_Page {
 					<td>
 						<input type="number" id="oif_scale_quality" name="<?php echo esc_attr( OIF_OPTION_KEY ); ?>[scale_quality]" value="<?php echo esc_attr( $settings['scale_quality'] ); ?>" min="50" max="100" class="small-text" />
 						<p class="description"><?php esc_html_e( 'Default quality when scaling images from the results table (50–100).', 'oversized-image-finder' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">
+						<label for="oif_bulk_scale_batch"><?php esc_html_e( 'Bulk scale batch size', 'oversized-image-finder' ); ?></label>
+					</th>
+					<td>
+						<input type="number" id="oif_bulk_scale_batch" name="<?php echo esc_attr( OIF_OPTION_KEY ); ?>[bulk_scale_batch]" value="<?php echo esc_attr( $settings['bulk_scale_batch'] ); ?>" min="1" max="20" class="small-text" />
+						<p class="description"><?php esc_html_e( 'How many images to scale per request during bulk scale (1–20).', 'oversized-image-finder' ); ?></p>
 					</td>
 				</tr>
 				<tr>
@@ -439,9 +458,19 @@ class OIF_Admin_Page {
 				<button type="button" class="button" id="oif-next-page"><?php esc_html_e( 'Next', 'oversized-image-finder' ); ?> &rarr;</button>
 			</div>
 
+			<div class="oif-bulk-bar" id="oif-bulk-bar" hidden>
+				<span id="oif-selected-count"></span>
+				<button type="button" class="button button-primary" id="oif-bulk-scale">
+					<?php esc_html_e( 'Bulk scale down', 'oversized-image-finder' ); ?>
+				</button>
+			</div>
+
 			<table class="wp-list-table widefat fixed striped oif-results-table" id="oif-results-table">
 				<thead>
 					<tr>
+						<th class="oif-col-check">
+							<input type="checkbox" id="oif-select-page" title="<?php esc_attr_e( 'Select all on page', 'oversized-image-finder' ); ?>" />
+						</th>
 						<th class="oif-col-rank">#</th>
 						<th class="oif-col-thumb"><?php esc_html_e( 'Preview', 'oversized-image-finder' ); ?></th>
 						<th class="oif-col-sortable" data-sort="filename"><?php esc_html_e( 'Filename', 'oversized-image-finder' ); ?></th>
@@ -457,7 +486,7 @@ class OIF_Admin_Page {
 				</thead>
 				<tbody id="oif-results-body">
 					<tr class="oif-empty-row">
-						<td colspan="11"><?php esc_html_e( 'No scan results yet. Click "Start Scan" to begin.', 'oversized-image-finder' ); ?></td>
+						<td colspan="12"><?php esc_html_e( 'No scan results yet. Click "Start Scan" to begin.', 'oversized-image-finder' ); ?></td>
 					</tr>
 				</tbody>
 			</table>

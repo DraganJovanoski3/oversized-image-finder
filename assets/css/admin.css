@@ -134,6 +134,26 @@
 	color: #646970;
 }
 
+.oif-bulk-bar {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin: 0 0 12px;
+	padding: 10px 12px;
+	background: #f6f7f7;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+}
+
+.oif-bulk-bar #oif-selected-count {
+	font-weight: 600;
+}
+
+.oif-col-check {
+	width: 28px;
+	text-align: center;
+}
+
 .oif-results-table .oif-col-thumb {
 	width: 70px;
 }

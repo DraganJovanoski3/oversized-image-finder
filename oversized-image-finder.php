@@ -3,7 +3,7 @@
  * Plugin Name: Oversized Image Finder
  * Plugin URI: https://github.com/
  * Description: Find oversized images that slow down your site. Scan the Media Library, uploads folder, and theme/plugin directories. View filename, size, dimensions, and more.
- * Version: 1.2.0
+ * Version: 1.3.0
  * Author: DP
  * Text Domain: oversized-image-finder
  * Requires at least: 5.8
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'OIF_VERSION', '1.2.0' );
+define( 'OIF_VERSION', '1.3.0' );
 define( 'OIF_PLUGIN_FILE', __FILE__ );
 define( 'OIF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'OIF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -47,6 +47,7 @@ function oif_get_default_settings() {
 		'skip_thumbnails'   => 1,
 		'check_usage'       => 0,
 		'scale_quality'     => 82,
+		'bulk_scale_batch'  => 5,
 	);
 }
 
