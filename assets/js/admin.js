@@ -769,7 +769,7 @@
 		return (bytes / 1048576).toFixed(2) + ' MB';
 	}
 
-	function runBulkScaleBatches(items) {
+	function runBulkScaleBatches(items, scalePayload) {
 		var settings = getSettings();
 		var batchSize = parseInt(settings.bulk_scale_batch, 10) || 5;
 		var chunks = chunkArray(items, batchSize);
@@ -778,7 +778,7 @@
 		var totalSkipped = 0;
 		var totalSaved = 0;
 		var allErrors = [];
-		var basePayload = getScalePayloadBase();
+		var basePayload = scalePayload || getScalePayloadBase();
 
 		if (els.progress) {
 			els.progress.hidden = false;
@@ -863,10 +863,14 @@
 			els.scaleApply.textContent = oifAdmin.i18n.scaling;
 		}
 
+		var scalePayload = getScalePayloadBase();
+		var itemsToScale = bulkTargets.slice();
+		var singleTarget = scaleTarget;
+
 		closeScaleModal();
 
 		if (isBulk) {
-			runBulkScaleBatches(bulkTargets)
+			runBulkScaleBatches(itemsToScale, scalePayload)
 				.catch(function (error) {
 					hideProgress();
 					window.alert(error.message || oifAdmin.i18n.scanError);
@@ -880,9 +884,9 @@
 			return;
 		}
 
-		var payload = Object.assign(getScalePayloadBase(), {
-			path: scaleTarget.path,
-			attachment_id: String(scaleTarget.attachment_id || 0),
+		var payload = Object.assign(scalePayload, {
+			path: singleTarget.path,
+			attachment_id: String(singleTarget.attachment_id || 0),
 		});
 
 		post('oif_scale_image', payload)
